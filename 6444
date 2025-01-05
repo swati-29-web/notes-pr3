@@ -1,0 +1,184 @@
+Yes, you can change the Kubernetes **API server port** from the default `6443` to a different port. However, it’s generally not recommended unless absolutely necessary, as it requires changes across multiple configurations. Below are the steps to change the Kubernetes API server port:
+
+---
+
+## 🚀 **1. Stop kubelet Service**
+
+On your **master node**, stop the kubelet service:
+
+```bash
+sudo systemctl stop kubelet
+```
+
+---
+
+## 🚀 **2. Update the kube-apiserver Manifest**
+
+The Kubernetes API server is managed as a static pod by kubelet. Its configuration file is located at:
+
+```bash
+sudo nano /etc/kubernetes/manifests/kube-apiserver.yaml
+```
+
+### **Modify the Port:**
+
+1. Find the line with `--secure-port=6443` and change it to your desired port, e.g., `--secure-port=6444`.
+
+```yaml
+- --secure-port=6444
+```
+
+2. Also ensure the `hostPort` under the container spec matches:
+
+```yaml
+ports:
+  - containerPort: 6443
+    hostPort: 6444
+    protocol: TCP
+```
+
+---
+
+## 🚀 **3. Update kubelet Configuration**
+
+Check the kubelet configuration file at `/var/lib/kubelet/config.yaml` and ensure it’s pointing to the correct port for the API server.
+
+If there’s a reference to `6443`, update it:
+
+```yaml
+server: https://127.0.0.1:6444
+```
+
+Restart kubelet:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+```
+
+---
+
+## 🚀 **4. Update kubeconfig Files**
+
+Update the `kubeconfig` file used by `kubectl` and nodes:
+
+```bash
+sudo nano /etc/kubernetes/admin.conf
+```
+
+Look for the `server:` entry and update the port:
+
+```yaml
+server: https://<master-node-ip>:6444
+```
+
+Update the local `~/.kube/config` file:
+
+```bash
+cp /etc/kubernetes/admin.conf ~/.kube/config
+sudo chown $(id -u):$(id -g) ~/.kube/config
+```
+
+---
+
+## 🚀 **5. Update Worker Nodes (if any)**
+
+If you have worker nodes, update their kubelet configuration file `/var/lib/kubelet/config.yaml` and point to the new API server port:
+
+```yaml
+server: https://<master-node-ip>:6444
+```
+
+Restart the kubelet service on the worker nodes:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart kubelet
+```
+
+---
+
+## 🚀 **6. Update Firewall Rules**
+
+Make sure the new port (`6444`) is allowed in your firewall settings:
+
+- **On the master node:**
+```bash
+sudo ufw allow 6444/tcp
+sudo ufw reload
+```
+
+- **In AWS Security Group:**
+Ensure that the new port (`6444`) is open for inbound traffic.
+
+---
+
+## 🚀 **7. Verify the API Server**
+
+Check if the API server is running on the new port:
+
+```bash
+sudo netstat -tulnp | grep 6444
+```
+
+Or:
+
+```bash
+sudo ss -tulnp | grep 6444
+```
+
+Verify connectivity:
+
+```bash
+curl -k https://127.0.0.1:6444
+```
+
+Check cluster status:
+
+```bash
+kubectl cluster-info
+kubectl get nodes
+```
+
+---
+
+## 🚀 **8. Final Validation**
+
+Ensure everything is functional:
+
+- **Master Node:**  
+   ```bash
+   kubectl get nodes
+   ```
+- **Worker Nodes:**  
+   ```bash
+   kubectl get pods -A
+   ```
+
+If all nodes are in `Ready` state and pods are running correctly, the port change was successful.
+
+---
+
+## 🚀 **9. Clean Up Old Port (Optional)**
+
+If the old port (`6443`) is still occupied, free it:
+
+```bash
+sudo fuser -k 6443/tcp
+```
+
+Or identify the process:
+
+```bash
+sudo lsof -i :6443
+```
+
+Kill the specific process ID:
+
+```bash
+sudo kill -9 <PID>
+```
+
+---
+
+Let me know if you encounter any issues during these steps, and I’ll assist further! 🚀
