@@ -1,2 +1,100 @@
-echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-jammy main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+If you're on **Ubuntu 22.04 (Jammy)** and still seeing issues with the Kubernetes repository, let's carefully address this step by step.
+
+---
+
+## 📌 **1. Clean Up Previous Kubernetes Repository**
+
+Remove any previous Kubernetes repository files:
+
+```bash
+sudo rm -f /etc/apt/sources.list.d/kubernetes.list
+sudo rm -f /usr/share/keyrings/kubernetes-archive-keyring.gpg
+sudo apt-get clean
 sudo apt-get update
+```
+
+This ensures we're starting with a clean slate.
+
+---
+
+## 📌 **2. Add the Correct Kubernetes Repository for Ubuntu Jammy**
+
+Add the **official Kubernetes apt repository**:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y apt-transport-https ca-certificates curl
+sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo apt-get update
+```
+
+**Why xenial?**  
+The Kubernetes team still uses `kubernetes-xenial` in the repository name for compatibility, even on newer Ubuntu versions like Jammy. This is expected.
+
+---
+
+## 📌 **3. Verify the Repository**
+
+Ensure the repository was added correctly:
+
+```bash
+cat /etc/apt/sources.list.d/kubernetes.list
+```
+
+You should see something like this:
+
+```
+deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main
+```
+
+List available Kubernetes versions:
+
+```bash
+apt-cache policy kubeadm kubectl kubelet
+```
+
+If the output shows available versions, you're good to proceed.
+
+---
+
+## 📌 **4. Install Kubernetes Packages**
+
+Install the required Kubernetes packages:
+
+```bash
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+```
+
+The `apt-mark hold` prevents unintended upgrades.
+
+---
+
+## 📌 **5. Verify Installation**
+
+Ensure everything installed correctly:
+
+```bash
+kubeadm version
+kubelet --version
+kubectl version --client
+```
+
+---
+
+## 📌 **6. If the Issue Persists**
+
+If you're still facing the issue, please share the output of the following commands:
+
+1. ```bash
+   cat /etc/apt/sources.list.d/kubernetes.list
+   ```
+2. ```bash
+   sudo apt-get update
+   ```
+3. ```bash
+   apt-cache policy kubeadm kubectl kubelet
+   ```
+
+This will help identify any underlying issue with the repository or configuration.
